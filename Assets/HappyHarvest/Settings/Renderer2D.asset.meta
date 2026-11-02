@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 89d3cded5911541cba19198753ee020b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 259218
+  packageName: Happy Harvest - 2D Sample Project
+  packageVersion: 1.62
+  assetPath: Assets/HappyHarvest/Settings/Renderer2D.asset
+  uploadId: 961218
