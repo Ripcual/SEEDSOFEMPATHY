@@ -1,0 +1,15 @@
+# Seeds of Empathy
+Videojuego de simulación 2D sobre la convivencia familiar, el aislamiento rural y la salud mental. Trabajo Final de Grado (Ingeniería Informática) - UOC.
+
+## Estado del Proyecto
+En desarrollo inicial (PEC 2). Base técnica establecida sobre Unity 2D y el paquete Happy Harvest.
+
+## Cómo abrir el proyecto en local
+Para visualizar y editar el código fuente o los *assets*:
+1. Clona este repositorio en tu equipo local: `git clone https://github.com/Ripcual/Seeds-of-Empathy.git`
+2. Abre **Unity Hub**.
+3. Haz clic en "Add" (Añadir) y selecciona la carpeta raíz del repositorio clonado.
+4. Abre el proyecto utilizando la versión de Unity recomendada por el editor.
+
+## Ejecutables (Releases)
+Si deseas jugar la versión más reciente sin compilar el proyecto, dirígete a la pestaña **[Releases](https://github.com/Ripcual/Seeds-of-Empathy/releases)** de este repositorio y descarga el archivo ejecutable correspondiente a la última entrega (PEC).
