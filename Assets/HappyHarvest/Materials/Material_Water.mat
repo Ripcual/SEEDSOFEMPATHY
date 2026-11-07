@@ -98,6 +98,7 @@ Material:
     - _refra: 0.12
     - _scale: 2.04
     m_Colors:
+    - White: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor: {r: 0.44025153, g: 0.6711477, b: 1, a: 0}
     - _Color: {r: 0.27044016, g: 0.5499391, b: 1, a: 1}
     - _Color_1: {r: 0.53459114, g: 0.88870656, b: 1, a: 0}
