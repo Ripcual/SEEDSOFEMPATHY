@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using SeedsOfEmpathy;
 
 namespace HappyHarvest
 {
@@ -13,6 +14,25 @@ namespace HappyHarvest
 
         public SpriteRenderer Target;
         public Transform ItemAttachBone;
+
+        [Header("Seeds of Empathy")]
+        public CharacterRole Role = CharacterRole.Madre;
+
+        /// <summary>Rol que debe tomar la próxima instancia (se fija antes de Instantiate, antes del Awake).</summary>
+        public static CharacterRole? PendingRole;
+
+        /// <summary>True si es el personaje que controla el jugador.</summary>
+        public bool IsActive { get; private set; }
+        public bool CanControl => m_CanControl;
+
+        /// <summary>True mientras el personaje camina solo hacia un destino (GoTo).</summary>
+        public bool AutoControlled => m_AutoActive;
+        public bool AutoArrived { get; private set; }
+
+        private bool m_AutoActive;
+        private Vector3 m_AutoDestination;
+        private float m_AutoStuckTimer;
+        private Vector2 m_AutoLastPos;
 
         public int Coins
         {
@@ -69,7 +89,15 @@ namespace HappyHarvest
 
         void Awake()
         {
-            if (GameManager.Instance.Player != null)
+            if (PendingRole.HasValue)
+            {
+                Role = PendingRole.Value;
+                PendingRole = null;
+            }
+
+            // Un solo personaje por rol: si ya existe, esta copia sobra.
+            var _ = GameManager.Instance;
+            if (CharacterManager.Instance == null || CharacterManager.Instance.Has(Role))
             {
                 Destroy(gameObject);
                 return;
@@ -84,8 +112,58 @@ namespace HappyHarvest
             //prefab already in the scene and can sometime tuck it under other object in the hierarchy)
             gameObject.transform.SetParent(null);
             
-            GameManager.Instance.Player = this;
             DontDestroyOnLoad(gameObject);
+
+            CharacterManager.Instance.Register(this);
+        }
+
+        public void SetActive(bool active)
+        {
+            IsActive = active;
+            if (!active && m_TargetMarker != null) m_TargetMarker.Hide();
+        }
+
+        /// <summary>Camina solo hasta el destino (usado por las crisis).</summary>
+        public void GoTo(Vector3 destination)
+        {
+            m_AutoDestination = destination;
+            m_AutoActive = true;
+            AutoArrived = false;
+            m_AutoStuckTimer = 0.0f;
+            m_AutoLastPos = m_Rigidbody.position;
+        }
+
+        public void StopAuto()
+        {
+            m_AutoActive = false;
+        }
+
+        Vector2 AutoStep()
+        {
+            Vector2 toTarget = (Vector2)m_AutoDestination - m_Rigidbody.position;
+            if (toTarget.magnitude < 0.12f)
+            {
+                m_AutoActive = false;
+                AutoArrived = true;
+                return Vector2.zero;
+            }
+
+            // Si se atasca más de 3 segundos, se coloca directamente en el destino.
+            if ((m_Rigidbody.position - m_AutoLastPos).sqrMagnitude < 1e-6f)
+                m_AutoStuckTimer += Time.fixedDeltaTime;
+            else
+                m_AutoStuckTimer = 0.0f;
+            m_AutoLastPos = m_Rigidbody.position;
+
+            if (m_AutoStuckTimer > 3.0f)
+            {
+                m_Rigidbody.position = m_AutoDestination;
+                m_AutoActive = false;
+                AutoArrived = true;
+                return Vector2.zero;
+            }
+
+            return toTarget.normalized * 0.75f;
         }
         
         void Start()
@@ -102,6 +180,7 @@ namespace HappyHarvest
             m_NextItemAction.Enable();
             m_NextItemAction.performed += context =>
             {
+                if (!IsActive || !m_CanControl) return;
                 ToggleToolVisual(false);
                 m_Inventory.EquipNext();
                 ToggleToolVisual(true);
@@ -110,6 +189,7 @@ namespace HappyHarvest
             m_PrevItemAction.Enable();
             m_PrevItemAction.performed += context =>
             {
+                if (!IsActive || !m_CanControl) return;
                 ToggleToolVisual(false);
                 m_Inventory.EquipPrev();
                 ToggleToolVisual(true);
@@ -118,7 +198,7 @@ namespace HappyHarvest
             m_UseItemAction = InputAction.FindAction("Gameplay/Use");
             m_UseItemAction.Enable();
 
-            m_UseItemAction.performed += context => UseObject();
+            m_UseItemAction.performed += context => { if (IsActive) UseObject(); };
             
             m_CurrentLookDirection = Vector2.right;
             
@@ -131,12 +211,18 @@ namespace HappyHarvest
             }
             ToggleToolVisual(true);
             
-            UIHandler.UpdateInventory(m_Inventory);
-            UIHandler.UpdateCoins(m_Coins);
+            // Solo el personaje activo pinta su inventario/monedas; el cambio de personaje refresca la UI.
+            if (IsActive)
+            {
+                UIHandler.UpdateInventory(m_Inventory);
+                UIHandler.UpdateCoins(m_Coins);
+            }
         }
 
         private void Update()
         {
+            if (!IsActive) return;
+
             m_IsOverUI = EventSystem.current.IsPointerOverGameObject();
             m_CurrentInteractiveTarget = null;
             m_HasTarget = false;
@@ -222,7 +308,7 @@ namespace HappyHarvest
 
         void UseObject()
         {
-            if(m_IsOverUI)
+            if(!m_CanControl || m_IsOverUI)
                 return;
             
             if (m_CurrentInteractiveTarget != null)
@@ -238,7 +324,15 @@ namespace HappyHarvest
 
         void FixedUpdate()
         {
-            var move = m_MoveAction.ReadValue<Vector2>();
+            Vector2 move = Vector2.zero;
+            if (m_AutoActive)
+            {
+                if (m_CanControl) move = AutoStep();
+            }
+            else if (IsActive && m_CanControl && m_MoveAction != null)
+            {
+                move = m_MoveAction.ReadValue<Vector2>();
+            }
 
             //note: == and != for vector2 is overriden to take in account floating point imprecision.
             if (move != Vector2.zero)
@@ -248,7 +342,7 @@ namespace HappyHarvest
             else
             {
                 //we aren't moving, look direction is based on the currently aimed toward point
-                if (IsMouseOverGameWindow())
+                if (IsActive && IsMouseOverGameWindow())
                 {
                     Vector3 posToMouse = m_CurrentWorldMousePos - transform.position;
                     SetLookDirectionFrom(posToMouse);
@@ -336,21 +430,9 @@ namespace HappyHarvest
 
         public void ToggleControl(bool canControl)
         {
+            // Las acciones de entrada son compartidas por los dos personajes (mismo InputActionAsset),
+            // así que no se activan/desactivan aquí: se filtra con este flag y con IsActive.
             m_CanControl = canControl;
-            if (canControl)
-            {
-                m_MoveAction.Enable();
-                m_NextItemAction.Enable();
-                m_PrevItemAction.Enable();
-                m_UseItemAction.Enable();
-            }
-            else
-            {
-                m_MoveAction.Disable();
-                m_NextItemAction.Disable();
-                m_PrevItemAction.Disable();
-                m_UseItemAction.Disable();
-            }
         }
 
         public void UseItem()
