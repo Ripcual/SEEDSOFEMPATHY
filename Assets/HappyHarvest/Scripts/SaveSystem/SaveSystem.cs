@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using SeedsOfEmpathy;
 
 
 namespace HappyHarvest
@@ -13,7 +14,7 @@ namespace HappyHarvest
         [System.Serializable]
         public struct SaveData
         {
-            public PlayerSaveData PlayerData;
+            public CharactersData Characters;
             public DayCycleHandlerSaveData TimeSaveData;
             public SaveData[] ScenesData;
         }
@@ -29,7 +30,7 @@ namespace HappyHarvest
 
         public static void Save()
         {
-            GameManager.Instance.Player.Save(ref s_CurrentData.PlayerData);
+            CharacterManager.Instance.Save(ref s_CurrentData.Characters);
             GameManager.Instance.DayCycleHandler.Save(ref s_CurrentData.TimeSaveData);
 
             string savefile = Application.persistentDataPath + "/save.sav";
@@ -49,7 +50,7 @@ namespace HappyHarvest
 
         static void SceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            GameManager.Instance.Player.Load(s_CurrentData.PlayerData);
+            CharacterManager.Instance.Load(s_CurrentData.Characters);
             GameManager.Instance.DayCycleHandler.Load(s_CurrentData.TimeSaveData);
             //GameManager.Instance.Terrain.Load(s_CurrentData.TerrainData);
 

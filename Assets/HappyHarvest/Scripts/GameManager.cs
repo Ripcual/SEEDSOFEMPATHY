@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using SeedsOfEmpathy;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
@@ -87,6 +88,11 @@ namespace HappyHarvest
             CropDatabase.Init();
             
             Storage = new Storage();
+
+            // Seeds of Empathy: managers de personajes, crisis y HUD
+            if (GetComponent<CharacterManager>() == null) gameObject.AddComponent<CharacterManager>();
+            if (GetComponent<CrisisManager>() == null) gameObject.AddComponent<CrisisManager>();
+            if (GetComponent<SeedsHud>() == null) gameObject.AddComponent<SeedsHud>();
             
             m_CurrentTimeOfTheDay = StartingTime;
             
@@ -149,13 +155,19 @@ namespace HappyHarvest
         public void Pause()
         {
             m_IsTicking = false;
-            Player.ToggleControl(false);
+            SetControl(false);
         }
 
         public void Resume()
         {
             m_IsTicking = true;
-            Player.ToggleControl(true);
+            SetControl(true);
+        }
+
+        private void SetControl(bool canControl)
+        {
+            if (CharacterManager.Instance != null) CharacterManager.Instance.ToggleControlAll(canControl);
+            else if (Player != null) Player.ToggleControl(canControl);
         }
 
         public void RegisterSpawn(SpawnPoint spawn)
@@ -164,6 +176,12 @@ namespace HappyHarvest
             { //if we have no player, we need to create one
                 Instantiate(Resources.Load<PlayerController>("Character"));
                 spawn.SpawnHere();
+            }
+
+            // El segundo personaje aparece junto al primero (idempotente si ya existe).
+            if (spawn.SpawnIndex == 0 && Player != null && CharacterManager.Instance != null)
+            {
+                CharacterManager.Instance.EnsureSecondary(spawn);
             }
             
             m_ActiveTransitions.Add(spawn);
@@ -197,7 +215,7 @@ namespace HappyHarvest
                     UIHandler.SceneLoaded();
                     UIHandler.FadeFromBlack(() =>
                     {
-                        Player.ToggleControl(true);
+                        SetControl(true);
                     });
                 };
             });

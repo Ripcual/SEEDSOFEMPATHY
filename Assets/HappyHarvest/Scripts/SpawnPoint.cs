@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using SeedsOfEmpathy;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -12,6 +13,9 @@ namespace HappyHarvest
     public class SpawnPoint : MonoBehaviour
     {
         public int SpawnIndex;
+
+        [Tooltip("Opcional: dónde aparece el segundo personaje (hijo). Si está vacío, junto al spawn.")]
+        public Transform SecondaryCharacterStart;
 
         private void OnEnable()
         {
@@ -35,6 +39,8 @@ namespace HappyHarvest
                 GameManager.Instance.MainCamera.LookAt = playerTransform;
                 GameManager.Instance.MainCamera.ForceCameraPosition(playerTransform.position, Quaternion.identity);
             }
+
+            CharacterManager.Instance?.PlaceOthers(this);
         }
     }
 

@@ -35,6 +35,9 @@ namespace HappyHarvest
         public Light2D AmbientLight;
         public Gradient AmbientLightGradient;
 
+        [Tooltip("Seeds of Empathy: color mínimo de la luz ambiental, para que la madrugada (crisis) siga siendo legible.")]
+        public Color MinAmbientColor = new Color(0.22f, 0.25f, 0.38f);
+
         [Header("RimLights")] 
         public Light2D SunRimLight;
         public Gradient SunRimLightGradient;
@@ -74,7 +77,14 @@ namespace HappyHarvest
             //some test scene didn't have those set and we wanted to be able to still test those)
             if(AmbientLight != null)
 #endif
-                AmbientLight.color = AmbientLightGradient.Evaluate(ratio);
+            {
+                var ambient = AmbientLightGradient.Evaluate(ratio);
+                AmbientLight.color = new Color(
+                    Mathf.Max(ambient.r, MinAmbientColor.r),
+                    Mathf.Max(ambient.g, MinAmbientColor.g),
+                    Mathf.Max(ambient.b, MinAmbientColor.b),
+                    ambient.a);
+            }
 
 #if UNITY_EDITOR
             if(SunRimLight != null)
