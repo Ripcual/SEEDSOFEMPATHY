@@ -134,9 +134,9 @@ namespace SeedsOfEmpathy
             if (fallback) prefab = Resources.Load<PlayerController>("Character");
             if (prefab == null) return null;
 
-            Vector3 pos = spawn.SecondaryCharacterStart != null
+            Vector3 pos = FindFreePosition(spawn.SecondaryCharacterStart != null
                 ? spawn.SecondaryCharacterStart.position
-                : spawn.transform.position + new Vector3(1.2f, 0f, 0f);
+                : spawn.transform.position + new Vector3(1.2f, 0f, 0f), spawn.transform.position);
 
             // El rol debe estar fijado antes de que se ejecute el Awake de la instancia.
             PlayerController.PendingRole = CharacterRole.Hijo;
@@ -155,6 +155,34 @@ namespace SeedsOfEmpathy
             return inst;
         }
 
+        private static readonly Vector2[] k_Offsets =
+        {
+            Vector2.zero, new Vector2(0f, -1f), new Vector2(1f, -1f), new Vector2(-1f, -1f),
+            new Vector2(0f, -2f), new Vector2(1.5f, -2f), new Vector2(-1.5f, -2f), new Vector2(0f, -3f)
+        };
+
+        /// <summary>
+        /// Devuelve una posición sin colisionadores sólidos (paredes, vallas) cerca de la deseada,
+        /// para que el segundo personaje no aparezca atrapado dentro de un edificio.
+        /// Busca hacia el sur (delante de la casa) y, si no hay hueco, usa el origen del spawn.
+        /// </summary>
+        private static Vector3 FindFreePosition(Vector3 desired, Vector3 fallback)
+        {
+            Physics2D.SyncTransforms();
+            foreach (var o in k_Offsets)
+            {
+                var p = new Vector2(desired.x + o.x, desired.y + o.y);
+                var hits = Physics2D.OverlapCircleAll(p, 0.35f);
+                bool blocked = false;
+                foreach (var h in hits)
+                {
+                    if (h != null && !h.isTrigger) { blocked = true; break; }
+                }
+                if (!blocked) return new Vector3(p.x, p.y, desired.z);
+            }
+            return fallback;
+        }
+
         /// <summary>Al cambiar de escena, coloca al personaje no activo junto al spawn.</summary>
         public void PlaceOthers(SpawnPoint spawn)
         {
@@ -162,9 +190,9 @@ namespace SeedsOfEmpathy
             {
                 if (c == null || c == m_Active) continue;
 
-                c.transform.position = (c.Role == CharacterRole.Hijo && spawn.SecondaryCharacterStart != null)
+                c.transform.position = FindFreePosition((c.Role == CharacterRole.Hijo && spawn.SecondaryCharacterStart != null)
                     ? spawn.SecondaryCharacterStart.position
-                    : spawn.transform.position + new Vector3(1.2f, 0f, 0f);
+                    : spawn.transform.position + new Vector3(1.2f, 0f, 0f), spawn.transform.position);
             }
         }
 
