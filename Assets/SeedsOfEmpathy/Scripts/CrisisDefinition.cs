@@ -30,6 +30,8 @@ namespace SeedsOfEmpathy
         [TextArea] public string WarningMessage = "Hay luz en el taller de madrugada. Tu hijo no ha dormido.";
         [TextArea] public string StartMessage = "Tu hijo ha salido al huerto con herramientas y está montando un sistema de riego.";
         [TextArea] public string MediationHintMessage = "Acércate a él y haz clic para acompañarle.";
+        [TextArea] public string MadreLine = "Madre: ¿Cómo te encuentras?";
+        [TextArea] public string HijoLine = "Hijo: Nervioso. No puedo dormir hasta que arregle el riego.";
         [TextArea] public string TooFarMessage = "Acércate más a tu hijo.";
         [TextArea] public string MediationCancelledMessage = "Te has alejado. Vuelve a su lado.";
         [TextArea] public string ResolvedMessage = "Ha anotado el plan para más tarde y vuelve al taller.";
