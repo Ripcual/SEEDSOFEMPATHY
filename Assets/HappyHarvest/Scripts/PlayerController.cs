@@ -33,6 +33,8 @@ namespace HappyHarvest
         private Vector3 m_AutoDestination;
         private float m_AutoStuckTimer;
         private Vector2 m_AutoLastPos;
+        private float m_AutoBestDist;
+        private float m_AutoTotalTime;
 
         public int Coins
         {
@@ -130,12 +132,58 @@ namespace HappyHarvest
             m_AutoActive = true;
             AutoArrived = false;
             m_AutoStuckTimer = 0.0f;
+            m_AutoTotalTime = 0.0f;
             m_AutoLastPos = m_Rigidbody.position;
+            m_AutoBestDist = Vector2.Distance(m_Rigidbody.position, destination);
+            IgnoreObstaclesAlongPath(m_Rigidbody.position, destination);
         }
 
         public void StopAuto()
         {
             m_AutoActive = false;
+            RestoreCollisions();
+        }
+
+        private readonly System.Collections.Generic.List<(Collider2D, Collider2D)> m_IgnoredPairs = new System.Collections.Generic.List<(Collider2D, Collider2D)>();
+        private static readonly string[] k_KeepSolid = { "House", "LevelBounds", "ElevationTiles", "GroundBase" };
+
+        /// <summary>Durante el paseo automático atraviesa vallas y objetos sueltos (no la casa ni los límites).</summary>
+        private void IgnoreObstaclesAlongPath(Vector2 from, Vector2 to)
+        {
+            RestoreCollisions();
+            var mine = GetComponentsInChildren<Collider2D>();
+            var center = (from + to) * 0.5f;
+            var size = new Vector2(Mathf.Abs(to.x - from.x) + 3f, Mathf.Abs(to.y - from.y) + 3f);
+            foreach (var h in Physics2D.OverlapBoxAll(center, size, 0f))
+            {
+                if (h == null || h.isTrigger || h.GetComponentInParent<PlayerController>() != null) continue;
+
+                bool keep = false;
+                for (var t = h.transform; t != null && !keep; t = t.parent)
+                    foreach (var n in k_KeepSolid) if (t.name == n) { keep = true; break; }
+                if (keep) continue;
+
+                foreach (var m in mine)
+                {
+                    if (m.isTrigger) continue;
+                    Physics2D.IgnoreCollision(m, h, true);
+                    m_IgnoredPairs.Add((m, h));
+                }
+            }
+        }
+
+        private void RestoreCollisions()
+        {
+            foreach (var p in m_IgnoredPairs)
+                if (p.Item1 != null && p.Item2 != null) Physics2D.IgnoreCollision(p.Item1, p.Item2, false);
+            m_IgnoredPairs.Clear();
+        }
+
+        /// <summary>Gesto de trabajo (usado por las crisis): mira al frente y balancea la herramienta.</summary>
+        public void PlayWorkGesture()
+        {
+            SetLookDirectionFrom(Vector2.down);
+            m_Animator.SetTrigger("ToolSwing");
         }
 
         Vector2 AutoStep()
@@ -145,21 +193,30 @@ namespace HappyHarvest
             {
                 m_AutoActive = false;
                 AutoArrived = true;
+                RestoreCollisions();
                 return Vector2.zero;
             }
 
-            // Si se atasca más de 3 segundos, se coloca directamente en el destino.
-            if ((m_Rigidbody.position - m_AutoLastPos).sqrMagnitude < 1e-6f)
-                m_AutoStuckTimer += Time.fixedDeltaTime;
-            else
+            // Atasco por falta de progreso (también si roza una valla): si en 2 s no se acerca
+            // 0.3 unidades, o tarda más de 25 s, se coloca directamente en el destino.
+            m_AutoTotalTime += Time.fixedDeltaTime;
+            float dist = toTarget.magnitude;
+            if (dist < m_AutoBestDist - 0.3f)
+            {
+                m_AutoBestDist = dist;
                 m_AutoStuckTimer = 0.0f;
-            m_AutoLastPos = m_Rigidbody.position;
+            }
+            else
+            {
+                m_AutoStuckTimer += Time.fixedDeltaTime;
+            }
 
-            if (m_AutoStuckTimer > 3.0f)
+            if (m_AutoStuckTimer > 2.0f || m_AutoTotalTime > 25.0f)
             {
                 m_Rigidbody.position = m_AutoDestination;
                 m_AutoActive = false;
                 AutoArrived = true;
+                RestoreCollisions();
                 return Vector2.zero;
             }
 

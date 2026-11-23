@@ -31,15 +31,15 @@ namespace SeedsOfEmpathy
             }
 
             string hint = chars.SwitchLocked ? "" : "  (Tab: cambiar)";
-            GUI.Label(new Rect(10, 8, 400, 26), $"Personaje: {chars.ActiveRole}{hint}", m_Label);
+            GUI.Label(new Rect(w / 2f - 130, 8, 320, 26), $"Personaje: {chars.ActiveRole}{hint}", m_Label);
 
             var crisis = CrisisManager.Instance;
             if (crisis == null) return;
 
             if (crisis.State == CrisisState.Active)
             {
-                DrawBar(new Rect(10, 36, 200, 14), crisis.Tension, new Color(0.9f, 0.5f, 0.1f));
-                GUI.Label(new Rect(215, 31, 120, 24), "Tensión", m_Label);
+                DrawBar(new Rect(w / 2f - 130, 40, 200, 14), crisis.Tension, new Color(0.9f, 0.5f, 0.1f));
+                GUI.Label(new Rect(w / 2f + 75, 35, 120, 24), "Tensión", m_Label);
 
                 if (crisis.IsMediating)
                 {

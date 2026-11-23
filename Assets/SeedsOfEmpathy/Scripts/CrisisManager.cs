@@ -51,6 +51,10 @@ namespace SeedsOfEmpathy
         private bool m_Mediating;
         private float m_MediationTime;
         private float m_RegressionTimer;
+        private bool m_DialogueDone;
+        private float m_DialogueLeft;
+        private float m_HijoLineAt = -1f;
+        private float m_WorkTimer;
 
         private void Awake()
         {
@@ -107,13 +111,16 @@ namespace SeedsOfEmpathy
                     break;
 
                 case CrisisState.Active:
-                    Tension = Mathf.InverseLerp(Definition.StartHour, Definition.EndHour, hour);
-
                     if (running)
                     {
+                        UpdateWorkGesture();
                         UpdateMediation();
                         UpdateRegression();
                     }
+
+                    // La tensión sube con la hora y baja mientras la madre acompaña.
+                    float timeTension = Mathf.InverseLerp(Definition.StartHour, Definition.EndHour, hour);
+                    Tension = Mathf.Lerp(timeTension, 0.1f, Mathf.Clamp01(MediationProgress));
 
                     if (State == CrisisState.Active && hour >= Definition.EndHour)
                     {
@@ -157,6 +164,10 @@ namespace SeedsOfEmpathy
             m_RegressionTimer = Definition.PlantRegressionInterval;
             m_Mediating = false;
             m_MediationTime = 0f;
+            m_DialogueDone = false;
+            m_DialogueLeft = 0f;
+            m_HijoLineAt = -1f;
+            m_WorkTimer = 1f;
 
             // El jugador controla a quien no está en crisis y no puede cambiar.
             chars.ForceActive(other.Role);
@@ -170,7 +181,25 @@ namespace SeedsOfEmpathy
 
         private void UpdateMediation()
         {
-            if (!m_Mediating || m_Hijo == null) return;
+            if (m_Hijo == null) return;
+
+            // Acompañar no exige hacer clic: basta con permanecer junto a él.
+            if (!m_Mediating)
+            {
+                var m = CharacterManager.Instance.Get(CharacterRole.Madre);
+                if (m != null && Vector2.Distance(m.transform.position, m_Hijo.transform.position) <= Definition.MediationRange)
+                {
+                    m_Mediating = true;
+                    if (!m_DialogueDone)
+                    {
+                        m_DialogueDone = true;
+                        m_DialogueLeft = 7.5f;
+                        Say(Definition.MadreLine, 3.5f);
+                        m_HijoLineAt = Time.unscaledTime + 3.5f;
+                    }
+                }
+                return;
+            }
 
             var madre = CharacterManager.Instance.Get(CharacterRole.Madre);
             if (madre == null) return;
@@ -184,11 +213,33 @@ namespace SeedsOfEmpathy
                 return;
             }
 
+            if (m_HijoLineAt > 0f && Time.unscaledTime >= m_HijoLineAt)
+            {
+                m_HijoLineAt = -1f;
+                Say(Definition.HijoLine, 4f);
+            }
+
+            // Primero hablan; la mediación solo avanza cuando termina la conversación.
+            if (m_DialogueLeft > 0f)
+            {
+                m_DialogueLeft -= Time.deltaTime;
+                return;
+            }
+
             m_MediationTime += Time.deltaTime;
             if (m_MediationTime >= Definition.MediationHoldSeconds)
             {
                 Finish(CrisisState.Resolved);
             }
+        }
+
+        private void UpdateWorkGesture()
+        {
+            if (m_Hijo == null || m_Hijo.AutoControlled || !m_Hijo.AutoArrived) return;
+            m_WorkTimer -= Time.deltaTime;
+            if (m_WorkTimer > 0f) return;
+            m_WorkTimer = 1.8f;
+            m_Hijo.PlayWorkGesture();
         }
 
         private void UpdateRegression()
