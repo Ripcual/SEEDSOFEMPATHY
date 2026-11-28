@@ -30,8 +30,18 @@ namespace SeedsOfEmpathy
         [TextArea] public string WarningMessage = "Hay luz en el taller de madrugada. Tu hijo no ha dormido.";
         [TextArea] public string StartMessage = "Tu hijo ha salido al huerto con herramientas y está montando un sistema de riego.";
         [TextArea] public string MediationHintMessage = "Acércate a él y haz clic para acompañarle.";
-        [TextArea] public string MadreLine = "Madre: ¿Cómo te encuentras?";
-        [TextArea] public string HijoLine = "Hijo: Nervioso. No puedo dormir hasta que arregle el riego.";
+        [Tooltip("Conversación mientras la madre acompaña. Cada línea empieza por 'Madre:' o 'Hijo:'.")]
+        [TextArea] public string[] Dialogue =
+        {
+            "Madre: ¿Cómo te encuentras?",
+            "Hijo: Nervioso. No puedo dormir hasta que arregle el riego.",
+            "Madre: Son las tres de la madrugada, hijo. El riego puede esperar a mañana.",
+            "Hijo: No puede. Si falla, perdemos las plantas. Lo he dejado a medias y no paro de darle vueltas.",
+            "Madre: Te entiendo. A mí también me pasa con el huerto: lo repaso mil veces y aun así no me quedo tranquila.",
+            "Hijo: Es que ahora mismo tengo mucha energía y no sé qué hacer con ella.",
+            "Madre: Pues hazlo conmigo. Yo me quedo aquí, a tu lado, y lo miramos juntos.",
+            "Hijo: Vale… Gracias, mamá. Creo que ya puedo respirar un poco.",
+        };
         [TextArea] public string TooFarMessage = "Acércate más a tu hijo.";
         [TextArea] public string MediationCancelledMessage = "Te has alejado. Vuelve a su lado.";
         [TextArea] public string ResolvedMessage = "Ha anotado el plan para más tarde y vuelve al taller.";
